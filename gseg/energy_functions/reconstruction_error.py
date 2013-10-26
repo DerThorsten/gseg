@@ -104,6 +104,10 @@ class ReconstructionError(object):
 			viewer.autoRange()
 			QtGui.QApplication.instance().exec_()
 
+		del cgp2
+		del tgrid2
+		import gc
+		gc.collect()
 
 		#print "av px error ",avPixelError , "weighted nSeg",self.beta * float(nSeg)  
 

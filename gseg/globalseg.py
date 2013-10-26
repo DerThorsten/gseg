@@ -1,48 +1,9 @@
+import numpy
+import opengm
+import vigra
 
-
-
-"""
-X  are region  variables
-
-
-INPUT:
-	E_G(X) :
-		- is a very high order function which should be minimized
-
-	DIFFERENT_REDUCED_SEG  = { watershed, mc on gradient , etc }
-
-WORKING DATA:
-	P_L(X) :
-		- is the probability desity  which will be modified 
-
-		- it can be a graphical model of any structure
-
-		- the structure of the graphical model
-		  should resamble somehow E_G(X)
-
-
-
-ALGORITHM:
-	
-Initialization : 
-	- evaluate all seg in DIFFERENT_REDUCED_SEG
-
-	- get elite samples from evaluation
-
-	- update probability from elite samples
-
-Iteration :
-	
-
-
-"""
-
-
-# defined by user
-
-def globalEnergyFunction(state):
-    pass
-
+import layerviewer as lv
+from pyqtgraph.Qt import QtGui, QtCore
 
 def sampleStateFromProbability(stateMean,stateStd):
 
@@ -56,116 +17,110 @@ def sampleStateFromProbability(stateMean,stateStd):
     
 
 
-def probabilityToEnergy(p,out=None):
-    pass
-
-def sampleFromGauss(mean,std,out=None):
-    pass
-
-
-class MulticutOracle(object):
-    def __init__(self,cgp):
-        self.cgp=cgp
-        self.probablity = numpy.ones(cgp.numCells(1),dtype=numpy.float64)
-        self.energy     = numpy.ones(cgp.numCells(1),dtype=numpy.float64)
-        self.mean       = None
-        self.std        = None
-
-        # generate graphical model 
-        self.gm         = None
-        self.cgc        = None
-
-
-    def updateDistribution(self,mean,std):
-        self.mean = mean
-        self.std  = std
 
 
 
+def optimizer(cgp,eGlobal,oracle,initStd=0.5,damping=0.9,img=None):
 
-    def getSamples(self,n,outPrimal=None,outDual=None):
-        
-        for s in range(n):
-
-            # get a sampled probability
-            self.probability=sampleFromGauss(mean=self.mean,std=self.std,out=self.probability)
-
-            # convert to energz
-            self.energy=probabilityToEnergy(p=self.probability,out=self.energy)
-
-            # update multicut weights
-            self.cgc.updateWeighs(self.energy)
-
-            # infer
-            self.cgc.infer()
-
-            # store result
-            outDual[s,:]    = self.cgc.argDual()
-            outPrimal[s,:]  = self.cgc.arg()
-
-        return outPrimal,outDual
-
-
-
-"""
-    - multicut  (|V|-Class with permutable labels )
-    - multi-instancce (V|-Class , unique cells vs bg, but different cells might touch,semi permutable labels)
-    - supervised ( N-Class Seg )
-
-"""
-
-def optimizer(cgp,initStd=0.5,damping=0.5,globalEnergyFunction,oracle):
-
-
-    nVar          = cgp.numCells(2)
-    nSamples      = 1000
-    nEliteSamples = 20 
-    maxIterations = 100
+    nVar          = cgp.numCells(1)
+    nReg          = cgp.numCells(2)
+    nSamples      = 100
+    nEliteSamples = 10
+    maxIterations = 200
 
     
     stateMean =  numpy.zeros(nVar)+0.5
     stateStd  =  numpy.zeros(nVar)+initStd
 
-    bestState = numpy.zeros(nVar,dtype=uint32)
+    bestState = numpy.zeros(nVar,dtype=numpy.uint32)
     bestValue = float('inf')
+
+    bestSeg   = numpy.zeros(nReg,dtype=numpy.uint32)
+
+    samplesPrimal = numpy.zeros( [nSamples,nReg]  ,dtype=opengm.label_type)
+    samplesDual   = numpy.zeros( [nSamples,nVar]  ,dtype=opengm.label_type)
+
+    sampleEnergy = numpy.zeros(nSamples)
 
     for iteration in range(maxIterations):
 
+        #print "update probability"
         # update segmentation oracles probability
         oracle.updateDistribution(stateMean,stateStd)
 
-        # pass warm start (test for speedup)
-        oracle.setWarmStartCandidates([bestState])
-
+        #print "get samples (by multicut)"
         # get samples states from probablity desnisty
-        samplesPrimal,samplesDual = oracle.getSamples(nSamples)
+        samplesPrimal,samplesDual = oracle.getSamples(nSamples,outPrimal=samplesPrimal,outDual=samplesDual)
 
+        #print "eval samples"
         # evaluate samples
-        sampleEnergy = numpy.array([ globalEnergyFunction(s) for sp,sd in zip(samplesPrimal,samplesDual)])
+        for n in range(nSamples):
+            #print n
+            sampleEnergy[n]= eGlobal(argPrimal=samplesPrimal[n,:],argDual=samplesDual[n,:])
 
-        
-
-
-
-
+        print "value ",bestValue
 
 
-
-
+        #print "sort samples"
         # sort samples by energy
         sortedIndex  = numpy.argsort(sampleEnergy)
 
+        #print "get elite samples"
         # get elitem samples
-        eliteSamples  = numpy.array(sampleStates[sortedIndex[0:nEliteSamples]])
-
+        eliteSamplesDual    = samplesDual[ sortedIndex[0:nEliteSamples] ,:]
+        eliteSamplesPrimal  = samplesPrimal[ sortedIndex[0:nEliteSamples] ,:]
         if(sampleEnergy[sortedIndex[0]]<bestValue):
-            bestState[:] = eliteSamples[0][:]
+            bestState[:] = eliteSamplesDual[0,:]
+            bestSeg[:]   = eliteSamplesPrimal[0,:]
             bestValue    = sampleEnergy[sortedIndex[0]]
 
-
+        #print "shift samples"
         # shift probability density 
-        stateMean = stateMean*damping + (1.0-damping)*numpy.mean(eliteSamples,axis=1)
-        stateStd  = stateStd*damping  + (1.0-damping)*numpy.std(eliteSamples,axis=1)
+        #print "elite sahpe",eliteSamplesDual.shape
+
+        stateMean = stateMean*damping + (1.0-damping)*numpy.mean(eliteSamplesDual,axis=0)
+        stateStd  = stateStd*damping  + (1.0-damping)*numpy.std(eliteSamplesDual,axis=0)
+
+        #print "visu"
+        if (iteration+1)%40==0:
+            
+            app = QtGui.QApplication([])
+            viewer =  lv.LayerViewer()
+            #print "add layer"
+            viewer.addLayer(name='img',layerType='GrayLayer')
+
+            #print "add layer"
+            viewer.addLayer(name='denseImage',layerType='SegmentationLayer')
+
+
+           
+            viewer.show()
+
+            # input gray layer
+            #viewer.addLayer(name='LabelImage',layerType='GrayLayer')
+            #viewer.setLayerData(name='LabelImage',data=labelImage)
+            #print "imgshape",img.shape
+
+            # print "get label image"
+            # get feature image
+            labelImage = cgp.featureToImage(
+                cellType=2,
+                features=bestSeg.astype(numpy.float32),
+                ignoreInactive=True,
+                useTopologicalShape=False
+            )
+            denseLabels = vigra.analysis.labelImage(labelImage)
+            print "add layer"
+            viewer.setLayerData(name='img',data=img)
+
+            print "add layer"
+            viewer.setLayerData(name='denseImage',data=denseLabels)
+
+
+            viewer.autoRange()
+            QtGui.QApplication.instance().exec_()
+        print "next iter"
+
 
     return bestState,bestValue
 

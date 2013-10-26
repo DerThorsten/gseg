@@ -14,7 +14,7 @@ import gseg
 
 
 
-app = QtGui.QApplication([])
+
 
 
 
@@ -31,8 +31,10 @@ app = QtGui.QApplication([])
 
 visu 	 = False
 filepath = 'cell.jpg'
-img		 = numpy.squeeze(vigra.readImage(filepath))
-gradmag  = vigra.filters.gaussianGradientMagnitude(img,4.0)
+img = vigra.readImage(filepath)
+print img.shape
+img		 = numpy.squeeze(img)[0:60,0:100]
+gradmag  = vigra.filters.gaussianGradientMagnitude(img,2.0)
 
 seg,nseg = vigra.analysis.watersheds(gradmag)
 
@@ -43,7 +45,6 @@ seg,nseg = vigra.analysis.watersheds(gradmag)
 
 
 if visu:
-	app = QtGui.QApplication([])
 	viewer =  lv.LayerViewer()
 	viewer.show()
 
@@ -71,7 +72,13 @@ nCells1 = cgp.numCells(1)
 nCells2 = cgp.numCells(2)
 
 
-eGlobal=gseg.energy_functions.ReconstructionError(image=img,cgp=cgp,beta=0.5,norm=2)
+
+# energy function
+eGlobal=gseg.energy_functions.ReconstructionError(image=img,cgp=cgp,beta=0.1,norm=2)
+
+# segmentation oracle
+oracle=gseg.oracles.MulticutOracle(cgp=cgp)
+
 
 
 # some labeling
@@ -79,15 +86,13 @@ eGlobal=gseg.energy_functions.ReconstructionError(image=img,cgp=cgp,beta=0.5,nor
 
 def run():
 
-	for x in range(500):
-		primalLabeling = numpy.random.randint(2, size=nCells2)
-		eg=eGlobal(argPrimal=primalLabeling)
-		if x%10==0:
-			print eg
+	gseg.optimizer(cgp=cgp,eGlobal=eGlobal,oracle=oracle,initStd=0.7,damping=0.7,img=img)
 
+	
+run()
 
-import cProfile 
-cProfile.run("run()")
+#import cProfile 
+#cProfile.run("run()")
 
 
 
@@ -95,11 +100,6 @@ cProfile.run("run()")
 
 
 # segmentation layer
-
-
-
-
-print nCells0,nCells1,nCells2
 
 
 
