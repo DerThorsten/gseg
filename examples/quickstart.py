@@ -29,40 +29,12 @@ import gseg
 
 
 
-visu 	 = False
-filepath = 'cell.jpg'
-img = vigra.readImage(filepath)
-print img.shape
-img		 = numpy.squeeze(img)[0:60,0:100]
-gradmag  = vigra.filters.gaussianGradientMagnitude(img,2.0)
+visu 	 	= True
+filepath 	= 'l.jpg'
+img 		= vigra.readImage(filepath)[0:200,0:200,:]
 
-seg,nseg = vigra.analysis.watersheds(gradmag)
-
-
-
-
-
-
-
-if visu:
-	viewer =  lv.LayerViewer()
-	viewer.show()
-
-	# input gray layer
-	viewer.addLayer(name='Input',layerType='GrayLayer')
-	viewer.setLayerData(name='Input',data=img)
-
-	# gradmag gray layer
-	viewer.addLayer(name='GradMag',layerType='GrayLayer')
-	viewer.setLayerData(name='GradMag',data=gradmag)
-
-	# seg layer
-	viewer.addLayer(name='SuperPixels',layerType='SegmentationLayer')
-	viewer.setLayerData(name='SuperPixels',data=seg)
-
-
-	viewer.autoRange()
-	QtGui.QApplication.instance().exec_()
+gradmag  	= vigra.filters.gaussianGradientMagnitude(img,4.0)
+seg,nseg 	= vigra.analysis.watersheds(gradmag)
 
 
 tgrid 	= cgp2d.TopologicalGrid(seg.astype(numpy.uint64))
@@ -73,11 +45,47 @@ nCells2 = cgp.numCells(2)
 
 
 
-# energy function
-eGlobal=gseg.energy_functions.ReconstructionError(image=img,cgp=cgp,beta=0.1,norm=2)
+imgTopo  	= vigra.sampling.resize(imgLab,cgp.shape)
+imgRGBTopo  = vigra.colors.transform_Lab2RGB(imgTopo)
+gradTopo 	= vigra.filters.gaussianGradientMagnitude(imgTopo,1.0)
+labelsTopo  = vigra.sampling.resize(seg.astype(numpy.float32),cgp.shape,0)
 
+
+
+
+if visu:
+	app = QtGui.QApplication([])
+
+	viewer =  lv.LayerViewer()
+	viewer.show()
+
+	# input gray layer
+	viewer.addLayer(name='Input',layerType='RgbLayer')
+	viewer.setLayerData(name='Input',data=imgTopo)
+
+	# gradmag gray layer
+	viewer.addLayer(name='GradMag',layerType='GrayLayer')
+	viewer.setLayerData(name='GradMag',data=gradTopo)
+
+	# seg layer
+	viewer.addLayer(name='SuperPixels',layerType='SegmentationLayer')
+	viewer.setLayerData(name='SuperPixels',data=labelsTopo)
+
+
+	viewer.autoRange()
+	QtGui.QApplication.instance().exec_()
+
+
+
+
+
+# energy function
+eGlobal=gseg.energy_functions.ReconstructionError(image=imgTopo,edgeImage=gradTopo,
+ cgp=cgp,beta=0.1,gamma=0.3,norm=2)
+
+print "get oracle"
 # segmentation oracle
-oracle=gseg.oracles.MulticutOracle(cgp=cgp)
+oracle=gseg.oracles.MulticutOracle(cgp=cgp,beta=0.5)
 
 
 
@@ -86,7 +94,7 @@ oracle=gseg.oracles.MulticutOracle(cgp=cgp)
 
 def run():
 
-	gseg.optimizer(cgp=cgp,eGlobal=eGlobal,oracle=oracle,initStd=0.7,damping=0.7,img=img)
+	gseg.optimizer(cgp=cgp,eGlobal=eGlobal,oracle=oracle,initStd=3.0,damping=0.01,img=imgRGBTopo)
 
 	
 run()

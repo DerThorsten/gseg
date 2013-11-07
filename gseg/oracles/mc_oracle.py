@@ -1,5 +1,11 @@
 import numpy
 import opengm
+from progressbar import AnimatedMarker, Bar, BouncingBar, Counter, ETA, \
+     FileTransferSpeed, FormatLabel, Percentage, \
+    ProgressBar, ReverseBar, RotatingMarker, \
+    SimpleProgress, Timer
+
+
 
 def sampleFromGauss(mean,std,out,clip=[0.001,0.999]):
     #print "mean",mean.shape
@@ -31,7 +37,7 @@ def probabilityToWeights(p1,out,beta=0.5):
 
 
 class MulticutOracle(object):
-    def __init__(self,cgp):
+    def __init__(self,cgp,beta=0.5):
         self.cgp=cgp
         self.probability =  numpy.ones(cgp.numCells(1),dtype=numpy.float64)
         self.weights     =  numpy.ones(cgp.numCells(1),dtype=numpy.float64)
@@ -40,7 +46,7 @@ class MulticutOracle(object):
 
         # generate graphical model 
         self.cgc        = None
-
+        self.beta=beta
 
         boundArray = self.cgp.cell1BoundsArray()-1
 
@@ -68,14 +74,23 @@ class MulticutOracle(object):
 
 
     def getSamples(self,n,outPrimal,outDual):
-        
+        widgets = ['get %d Multicut Samples: '%n, Percentage(), ' ', Bar(marker=RotatingMarker()),
+                    ' ', ETA(), ' ', FileTransferSpeed()]
+        pbar = ProgressBar(widgets=widgets, maxval=n).start()
+
+        #widgets = [Bar('>'), ' ', ETA(), ' ', ReverseBar('<')]
+        #pbar = ProgressBar(widgets=widgets, maxval=n).start()
+
+
+
         for s in range(n):
+            pbar.update(s)
 
             # get a sampled probability
             self.probability=sampleFromGauss(mean=self.mean,std=self.std,out=self.probability)
 
             # convert to energz
-            self.weights=probabilityToWeights(p1=self.probability,out=self.weights)
+            self.weights=probabilityToWeights(p1=self.probability,out=self.weights,beta=self.beta)
 
             # update multicut weights
             self.cgc.changeWeights(self.weights)
@@ -87,6 +102,9 @@ class MulticutOracle(object):
             # store result
             outDual[s,:]    = self.cgc.argDual(out=outDual[s,:])
             outPrimal[s,:]  = self.cgc.arg()
+
+        pbar.finish()
+
 
         return outPrimal,outDual
 

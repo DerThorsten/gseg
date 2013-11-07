@@ -1,9 +1,32 @@
 import numpy
 import opengm
 import vigra
-
+import cgp2d
 import layerviewer as lv
 from pyqtgraph.Qt import QtGui, QtCore
+
+from progressbar import AnimatedMarker, Bar, BouncingBar, Counter, ETA, \
+     FileTransferSpeed, FormatLabel, Percentage, \
+    ProgressBar, ReverseBar, RotatingMarker, \
+    SimpleProgress, Timer
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 def sampleStateFromProbability(stateMean,stateStd):
 
@@ -20,13 +43,13 @@ def sampleStateFromProbability(stateMean,stateStd):
 
 
 
-def optimizer(cgp,eGlobal,oracle,initStd=0.5,damping=0.9,img=None):
+def optimizer(cgp,eGlobal,oracle,initStd=0.5,damping=0.5,img=None):
 
     nVar          = cgp.numCells(1)
     nReg          = cgp.numCells(2)
-    nSamples      = 100
-    nEliteSamples = 10
-    maxIterations = 200
+    nSamples      = 20
+    nEliteSamples = 1
+    maxIterations = 2000
 
     
     stateMean =  numpy.zeros(nVar)+0.5
@@ -48,14 +71,17 @@ def optimizer(cgp,eGlobal,oracle,initStd=0.5,damping=0.9,img=None):
         # update segmentation oracles probability
         oracle.updateDistribution(stateMean,stateStd)
 
-        #print "get samples (by multicut)"
+        print "get samples (by multicut)"
         # get samples states from probablity desnisty
         samplesPrimal,samplesDual = oracle.getSamples(nSamples,outPrimal=samplesPrimal,outDual=samplesDual)
 
         #print "eval samples"
-        # evaluate samples
+        widgets = ['evaluate %d Samples: '%nSamples, Percentage(), ' ', Bar(marker=RotatingMarker()),
+                    ' ', ETA(), ' ', FileTransferSpeed()]
+        pbar = ProgressBar(widgets=widgets, maxval=nSamples-1).start()
+
         for n in range(nSamples):
-            #print n
+            pbar.update(n)
             sampleEnergy[n]= eGlobal(argPrimal=samplesPrimal[n,:],argDual=samplesDual[n,:])
 
         print "value ",bestValue
@@ -81,44 +107,10 @@ def optimizer(cgp,eGlobal,oracle,initStd=0.5,damping=0.9,img=None):
         stateMean = stateMean*damping + (1.0-damping)*numpy.mean(eliteSamplesDual,axis=0)
         stateStd  = stateStd*damping  + (1.0-damping)*numpy.std(eliteSamplesDual,axis=0)
 
-        #print "visu"
-        if (iteration+1)%40==0:
+        print "iteration",iteration
+        if (iteration+1)%100==0:
             
-            app = QtGui.QApplication([])
-            viewer =  lv.LayerViewer()
-            #print "add layer"
-            viewer.addLayer(name='img',layerType='GrayLayer')
-
-            #print "add layer"
-            viewer.addLayer(name='denseImage',layerType='SegmentationLayer')
-
-
-           
-            viewer.show()
-
-            # input gray layer
-            #viewer.addLayer(name='LabelImage',layerType='GrayLayer')
-            #viewer.setLayerData(name='LabelImage',data=labelImage)
-            #print "imgshape",img.shape
-
-            # print "get label image"
-            # get feature image
-            labelImage = cgp.featureToImage(
-                cellType=2,
-                features=bestSeg.astype(numpy.float32),
-                ignoreInactive=True,
-                useTopologicalShape=False
-            )
-            denseLabels = vigra.analysis.labelImage(labelImage)
-            print "add layer"
-            viewer.setLayerData(name='img',data=img)
-
-            print "add layer"
-            viewer.setLayerData(name='denseImage',data=denseLabels)
-
-
-            viewer.autoRange()
-            QtGui.QApplication.instance().exec_()
+            cgp2d.visualize(img_rgb=img,cgp=cgp,edge_data_in=bestState.astype(numpy.float32))
         print "next iter"
 
 
