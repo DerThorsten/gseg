@@ -9,7 +9,7 @@ class CgpClustering(object):
 		self.labels    = numpy.zeros(self.cgp.numCells(2),dtype=numpy.uint64)
 
 
-
+		
 
 class HierarchicalClustering(CgpClustering):
 	def __init__(self,cgp):

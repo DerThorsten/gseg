@@ -45,7 +45,7 @@ cgp2d.visualize(img_rgb=imgRGBTopo,cgp=cgp)
 # segment
 ###############################################################################
 segmentor = gseg.segmentors.HierarchicalClustering(cgp=cgp)
-segmentor.segment(featuresB,100)
+segmentor.segment(features,100)
 labels 	= segmentor.labels 
 
 
