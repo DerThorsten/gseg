@@ -16,20 +16,5 @@ def colorSpaceDescriptor(imgRgb):
 
 
 
-def jointColorHistDescriptor(img,r=1,bins=5,sigma=[1.0,1.0]):
-	nCp 	 = img.shape[2]/3
-	outShape = [img.shape[0],img.shape[1],nCp,bins,bins,bins]
-
-	print "allocate ",outShape
-	out      = numpy.zeros(outShape,dtype=numpy.float32)
-
-
-	for cp in range(nCp): 
-		inputImg = img[:,:,cp*3:(cp+1)*3]
-		cOut = out[:,:,cp,:,:,:]
-		cOut = phist.jointHistogram(image=inputImg,bins=bins,r=r,sigma=sigma,out=cOut)
-
-
-	return out
 
 
