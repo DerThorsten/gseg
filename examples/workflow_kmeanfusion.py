@@ -4,34 +4,53 @@ import cgp2d
 import numpy
 import gseg
 import phist
-import lazycall
-
-
-
+from  lazycall import LazyArrays , LazyCaller,getFiles, makeFullPath
 import h5py
-
 from sklearn import preprocessing
-
 import matplotlib
 import pylab
+
+
+
+
+n = 200
+imagePath   		= "/home/tbeier/src/privatOpengm/experiments/datasets/bsd500/BSR/BSDS500/data/images/test/"
+files ,baseNames 	= getFiles(imagePath,"jpg")
+files 				= files[0:n]
+baseNames 			= baseNames[0:n]
+
+# rgb image
+images      		= LazyArrays(files=files,filetype="image") 
+# color space arrays
+csp      			= LazyArrays(files=makeFullPath("/home/tbeier/dump",baseNames,"h5"),dset="data",filetype="h5") 
+
+
+
+# color space convertion for all files in bsd
+batchFunction = LazyCaller(f=gseg.features.colorSpaceDescriptor,verbose=True)
+batchFunction.name = "colorpsace conversion"
+batchFunction.overwrite=True
+batchFunction.compress=True
+batchFunction.skipAll =False
+batchFunction.compressionOpts=2
+batchFunction.setBatchKwargs(["imgRgb"])
+batchFunction.setOutput(files=csp.files,dset=csp.dset)
+batchFunction(imgRgb=images)
+
+
+print csp[0].shape
+print csp[0]
+
+
+
+
+
+sys.exit()
+
+
+
 # A random colormap for matplotlib
 cmap = matplotlib.colors.ListedColormap ( numpy.random.rand ( 256,3))
-
-
-
-###############################################################################
-# Generate data
-###############################################################################
-visu 	 	= True
-filepath 	= '42049.jpg'
-#filepath    = '156065.jpg'
-img 		= vigra.readImage(filepath)#[0:200,0:200,:]
-imgLab  	= vigra.colors.transform_RGB2Lab(img)
-seg,nseg    = vigra.analysis.slicSuperpixels(imgLab,15.0,5)
-seg 		= vigra.analysis.labelImage(seg)
-tgrid 		= cgp2d.TopologicalGrid(seg.astype(numpy.uint64))
-cgp  		= cgp2d.Cgp(tgrid)
-
 
 
 
