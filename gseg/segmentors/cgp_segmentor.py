@@ -1,4 +1,4 @@
-from sklearn.cluster import Ward
+from sklearn.cluster import Ward,WardAgglomeration
 import numpy
 import phist
 import opengm
@@ -17,8 +17,12 @@ class HierarchicalClustering(CgpClustering):
 		self.connectivity 	= cgp.sparseAdjacencyMatrix()
 
 	def segment(self,features,nClusters):
-		ward = Ward(n_clusters=nClusters, connectivity=self.connectivity).fit(features)
-		self.labels[:] = ward.labels_
+
+		#print "features",features.shape
+		#print "self.connectivity",self.connectivity.shape
+
+		self.ward = WardAgglomeration(n_clusters=nClusters, connectivity=self.connectivity).fit(features.T)
+		self.labels[:] = self.ward.labels_
 
 
 
@@ -73,7 +77,7 @@ class ColorHistKMeanFusionClustering(object):
 
 
 
-class MulticutClustering(object):
+class MulticutClustering(CgpClustering):
 	def __init__(self,cgp):
 		super(MulticutClustering, self).__init__(cgp)
 
@@ -85,18 +89,27 @@ class MulticutClustering(object):
 		self.gm = opengm.gm(numpy.ones(nVar,dtype=opengm.label_type)*nVar)
 
 		# init with zero potts functions
-		fids = gm.addFunctions(opengm.pottFunctions([nVar,nVar],numpy.zeros(nFac),numpy.zeros(nFac) ))
+		fids = self.gm.addFunctions(opengm.pottsFunctions([nVar,nVar],numpy.zeros(nFac),numpy.zeros(nFac) ))
 		# add factors 
 		self.gm.addFactors(fids,cell1Bounds)
 
-		self.cgc = opengm.inference.Cgc(gm=gm,parameter=opengm.InfParam(planar=True)) 
+		self.cgc = opengm.inference.Cgc(gm=self.gm,parameter=opengm.InfParam(planar=True)) 
 
-	def segment(self,weights,warmStart=None):
+	def segment(self,weights,warmStart=None,verbose=False):
 		self.cgc.changeWeights(weights)
-		self.cgc.infer()
+		if verbose :
+			self.cgc.infer(self.cgc.verboseVisitor())
+		else :
+			self.cgc.infer()
 		self.labels[:]=self.cgc.arg()
 
 
 
 
 
+
+
+def multicutClustering(cgp,weights,verbose=False):
+	segmentor = MulticutClustering(cgp)
+	segmentor.segment(weights,verbose=verbose)
+	return segmentor.labels
