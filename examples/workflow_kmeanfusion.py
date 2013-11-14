@@ -27,14 +27,21 @@ def showlab(imgLab):
     plt.show()
 
 
-n = 35
+n = 40
 imagePath   		= "/home/tbeier/src/privatOpengm/experiments/datasets/bsd500/BSR/BSDS500/data/images/test/"
+imagePath           = "/home/tbeier/images/BSR/BSDS500/data/images/test/"
 files ,baseNames 	= getFiles(imagePath,"jpg")
 files 				= files[0:n]
+
+
+
+
 baseNames 			= baseNames[0:n]
 
 # rgb image
 images      		= LazyArrays(files=files,filetype="image") 
+
+assert len(images)>0
 
 
 # color space arrays
@@ -55,164 +62,6 @@ oseg1                = LazyArrays(files=makeFullPath("/home/tbeier/dump/overseg1
 
 # oversegmentation
 oseg2                = LazyArrays(files=makeFullPath("/home/tbeier/dump/overseg2",baseNames,"h5"),dset="data",filetype="h5")
-
-def nifty_sp(
-    imgRGB,
-    lhist,
-    edgeThresholdSeed   = 0.7,
-    scaleSeed           = 6.0,
-    edgeThresholdGrow   = 0.20,
-    scaleGrow           = 30.0,
-    sigmaGradMagSeed    = 1.0,
-    powSeedMap          = 2,
-    sigmaSmooth         = 0.7,
-    sigmaGradMagGrow    = 1.0,
-    s=3,
-    sf=100.0
-
-):
-    a= gseg.segmentors.multicutClustering
-    assert isinstance(imgRGB, vigra.VigraArray)
-    img = vigra.colors.transform_RGB2Lab(imgRGB)
-    assert isinstance(img, vigra.VigraArray)
-    
-    print "diffuse"
-    diffImgSeed = vigra.filters.nonlinearDiffusion(img,edgeThresholdSeed, scaleSeed)
-    #showlab(diffImgSeed)
-    diffImgGrow = vigra.filters.nonlinearDiffusion(img,edgeThresholdGrow, scaleGrow)
-    #showlab(diffImgGrow)
-    print img.shape,img.dtype,img[0,0,:].shape
-
-    ii = vigra.VigraArray(numpy.squeeze(img[:,:,0]))#,axistags=vigra.defaultAxistags("xy"))
-
-    #ew = scipy.ndimage.gaussian_laplace(img[0,0,:],sigma=1.0)
-    ewA = vigra.filters.hessianOfGaussian(ii,sigma=1.0)
-    ewB = vigra.filters.hessianOfGaussian(ii,sigma=2.0)
-    gmA = vigra.filters.gaussianGradientMagnitude(img,sigma=1.5)
-    print "ew",ewA.shape
-    #plt.imshow(flip(ewA[:,:,2]))
-    #plt.show()
-
-    """
-    #print "smart watershed"
-    # find seeds 
-    #print "gaussianGradientMagnitude on diffImg=%r with sigma=%f" % (diffImg.shape, sigmaGradMagSeed)
-    seeding_map  = vigra.filters.gaussianGradientMagnitude(diffImgSeed,sigmaGradMagSeed)
-    #print "seeding_map: shape=%r" % (seeding_map.shape,)
-    #seeding_map  = vigra.filters.gaussianSmoothing(seeding_map**powSeedMap,sigmaSmooth)
-    local_minima = vigra.analysis.extendedLocalMinima(seeding_map)
-    seed_map     = vigra.analysis.labelImageWithBackground(local_minima,neighborhood=4)
-    #print "seed_map: %d labels" % seed_map.max()
-
-    # evaluation map
-    evaluation_map = vigra.filters.gaussianGradientMagnitude(diffImgGrow,sigmaGradMagGrow)
-
-    # watersheds
-    labels,numseg=vigra.analysis.watersheds( 
-        image        = evaluation_map,
-        seeds        = seed_map,
-        neighborhood = 4,
-        method       = 'RegionGrowing'
-    )
-    """
-    feat = gseg.features.colorSpaceDescriptor(imgRGB)
-
-    feat.reshape([imgRGB.shape[0],imgRGB.shape[1],-1])
-
-    feat = numpy.concatenate([feat,ewA],axis=2)
-
-    feat = vigra.VigraArray(feat,axistags=vigra.defaultAxistags("xyc"))
-
-    print "feat shape",feat.shape
-    seg,nseg    = vigra.analysis.slicSuperpixels(feat,sf,s)
-    print "done",seg.shape
-    labels         = vigra.analysis.labelImage(seg)
-
-    #print "%d superpixels" % numseg
-
-    #print "get init cgp and resample image"
-    #print "numseg",numseg,labels.min(),labels.max()
-    cgp,grid=cgp2d.cgpFromLabels(labels.astype(numpy.uint64))
-    imgRGBBig = vigra.sampling.resize(imgRGB,cgp.shape,0)
-    cgp2d.visualize(imgRGBBig,cgp)
-
-
-    
-    
-   
-    assert labels.shape[2] == 1
-    labels = labels.squeeze()
-    assert labels.ndim == 2, "labels has shape %r" % (labels.shape,)
-
-
-
-
-
-    segmentor = gseg.segmentors.HierarchicalClustering(cgp=cgp)
-    # whiten the features
-
-    print  "lhist shape",lhist.shape
-    lhist = lhist.reshape([lhist.shape[0],lhist.shape[1],-1])
-    total = numpy.concatenate([img,diffImgSeed,diffImgGrow,imgRGB,ewA,ewB],axis=2)
-    total = numpy.concatenate([feat,diffImgSeed,diffImgGrow, img,gmA,ewA,ewB],axis=2)
-    total = numpy.concatenate([img,diffImgSeed,diffImgGrow,lhist],axis=2)
-    total = numpy.concatenate([feat,diffImgSeed,diffImgGrow,gmA,ewA,ewB,lhist],axis=2)
-
-
-    features    = cgp.accumulateCellFeatures(cellType=2,image=total,features="Mean")[0]['Mean']
-    features=preprocessing.scale(features)
-    segmentor.segment(features,3000)
-    labels  = segmentor.labels 
-    cell1State = numpy.zeros(cgp.numCells(1),dtype=numpy.uint32)
-    cell1Bounds=cgp.cell1BoundsArray()-1
-
-    for ci  in xrange(cgp.numCells(1)):
-        
-        r1,r2  = cell1Bounds[ci,:]
-        if labels[r1]!=labels[r2]:
-            cell1State[ci]=1
-    
-
-    tgrid2 = cgp.merge2Cells(cell1State)
-    cgp2   = cgp2d.Cgp(tgrid2)
-    cgp2d.visualize(imgRGBBig,cgp2)
-
-
-
-
-    # final multicut stage
-    sigmaMC  = 1.5
-    gammaMC  = 1.0
-    gradMag       = vigra.filters.gaussianGradientMagnitude(diffImgSeed,sigma=1.0)
-    gradMag       = numpy.squeeze(gradMag)
-    meanGrad      = cgp2.accumulateCellFeatures(cellType=1,image=gradMag,features="Mean")[0]['Mean']
-    e1 = numpy.exp(-gammaMC*meanGrad)
-    e0 = 1.0 - e1
-    weights = e1-e0
-
-    print"weightshape",weights.shape,"ncell1",cgp2.numCells(1)
-
-    labels=gseg.segmentors.multicutClustering(cgp2,weights)
-
-
-    cell1State = numpy.zeros(cgp2.numCells(1),dtype=numpy.uint32)
-    cell1Bounds=cgp2.cell1BoundsArray()-1
-
-    for ci  in xrange(cgp2.numCells(1)):
-        
-        r1,r2  = cell1Bounds[ci,:]
-        if labels[r1]!=labels[r2]:
-            cell1State[ci]=1
-
-    cgp2d.visualize(img_rgb=imgRGBBig,cgp=cgp2,edge_data_in=cell1State.astype(numpy.float32),cmap="jet")
-
-
-    tgrid3 = cgp2.merge2Cells(cell1State)
-    cgp3   = cgp2d.Cgp(tgrid3)
-    cgp2d.visualize(imgRGBBig,cgp3)
-
-    return labels
-
 
 
 
@@ -283,7 +132,7 @@ batchFunction.setBatchKwargs(["imgCsp"])
 batchFunction.setOutput(files=oseg.files,dset=oseg.dset)
 batchFunction.setCompression(True,2)
 # DO THE CALL
-batchFunction(imgCsp=csp,s=3,sf=100.0,visu=False)
+batchFunction(imgCsp=csp,s=3,sf=100.0,visu=True)
 
 
 
@@ -300,7 +149,7 @@ batchFunction(imgCsp=csp,overseg=oseg,lhist=lhist,visu=False)
 
 
 
-# stage3reducer
+# stage2reducer
 batchFunction = LazyCaller(f=gseg.segmentors.stage2Reducer,verbose=True)
 batchFunction.name = "stage 2 reducer"
 batchFunction.overwrite=False
@@ -313,7 +162,8 @@ batchFunction(imgCsp=csp,overseg=oseg1,visu=False)
 
 
 print "img here"
-for i in range(25,n):
+for i in range(3,n):
+    print "name ",files[i]
     k=10
     allcsp = csp[i]
     hist   = lhist[i]
@@ -377,7 +227,7 @@ for i in range(25,n):
 
     cell1StateMixed = numpy.zeros(cgp.numCells(1),dtype=numpy.uint32)
 
-    for kk in [2,4,8,16,32,64,128,512,cgp.numCells(2)/2]:
+    for kk in [10]:
 
         segmentor = gseg.segmentors.HierarchicalClustering(cgp=cgp)
         # whiten the features
@@ -416,5 +266,5 @@ for i in range(25,n):
 
 
 
-    cgp2d.visualize(img_rgb=imgRGBTopo,cgp=cgp,edge_data_in=cell1StateMixed.astype(numpy.float32),cmap="hot")
+    #cgp2d.visualize(img_rgb=imgRGBTopo,cgp=cgp,edge_data_in=cell1StateMixed.astype(numpy.float32),cmap="hot")
     #cgp2d.visualize(img_rgb=imgRGBTopo,cgp=cgp2)#,edge_data_in=cell1State.astype(numpy.float32))

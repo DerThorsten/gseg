@@ -24,6 +24,7 @@ def nifty_sp(
     features = numpy.concatenate([features,dxx],axis=2)
     feat = vigra.taggedView(features,axistags=vigra.defaultAxistags("xyc"))
 
+    
     #print "feat shape",feat.shape
     seg,nseg    = vigra.analysis.slicSuperpixels(feat,sf,s)
     labels      = vigra.analysis.labelImage(seg)
@@ -128,7 +129,7 @@ def stage2Reducer(
 
     # final multicut stage
     sigmaMC  = 1.5
-    gammaMC  = 1.0
+    gammaMC    = 1.0
     gradMag       = vigra.filters.gaussianGradientMagnitude(imgLab,sigma=1.0)
     gradMag       = numpy.squeeze(gradMag)
     meanGrad      = cgp.accumulateCellFeatures(cellType=1,image=gradMag,features="Mean")[0]['Mean']
@@ -156,7 +157,7 @@ def stage2Reducer(
     cgp2   = cgp2d.Cgp(tgrid2)
     if visu:
         imgRGBBig=vigra.sampling.resize(imgRGB,cgp.shape,0)
-        cgp2d.visualize(img_rgb=imgRGBBig,cgp=cgp2,edge_data_in=cell1State.astype(numpy.float32),cmap="jet")
+        cgp2d.visualize(img_rgb=imgRGBBig,cgp=cgp,edge_data_in=cell1State.astype(numpy.float32),cmap="jet")
         cgp2d.visualize(imgRGBBig,cgp2)
 
     return cgp2.labelGrid(2,False)

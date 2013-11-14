@@ -96,16 +96,37 @@ class MulticutClustering(CgpClustering):
 		self.cgc = opengm.inference.Cgc(gm=self.gm,parameter=opengm.InfParam(planar=True)) 
 
 	def segment(self,weights,warmStart=None,verbose=False):
-		self.cgc.changeWeights(weights)
+
+		#try :
+		#	self.cgc.changeWeights(weights)
+
+		#except :
+		nVar 	    = self.cgp.numCells(2)
+		nFac 		= self.cgp.numCells(1)
+		cell1Bounds = self.cgp.cell1BoundsArray()-1
+		self.gm2 = opengm.gm(numpy.ones(nVar,dtype=opengm.label_type)*nVar)
+
+		assert self.gm2.numberOfVariables == nVar
+		# init with zero potts functions
+		#print weights
+
+		pf = opengm.pottsFunctions([nVar,nVar],numpy.zeros(nFac),weights )
+		fids = self.gm2.addFunctions(pf)
+
+
+		# add factors 
+		self.gm2.addFactors(fids,cell1Bounds)
+
+		self.cgc2 = opengm.inference.Cgc(gm=self.gm2,parameter=opengm.InfParam(planar=True)) 
+
+
+
 		if verbose :
-			self.cgc.infer(self.cgc.verboseVisitor())
+			self.cgc2.infer(self.cgc.verboseVisitor())
 		else :
-			self.cgc.infer()
-		self.labels[:]=self.cgc.arg()
-
-
-
-
+			self.cgc2.infer()
+		
+		self.labels[:]=self.cgc2.arg()
 
 
 
