@@ -27,7 +27,7 @@ def showlab(imgLab):
     plt.show()
 
 
-n = 40
+n = 5
 imagePath   		= "/home/tbeier/src/privatOpengm/experiments/datasets/bsd500/BSR/BSDS500/data/images/test/"
 imagePath           = "/home/tbeier/images/BSR/BSDS500/data/images/test/"
 files ,baseNames 	= getFiles(imagePath,"jpg")
@@ -68,7 +68,7 @@ oseg2                = LazyArrays(files=makeFullPath("/home/tbeier/dump/overseg2
 # color space convertion for all files in bsd
 batchFunction = LazyCaller(f=gseg.features.colorSpaceDescriptor,verbose=True)
 batchFunction.name = "colorpsace conversion"
-batchFunction.overwrite=False
+batchFunction.overwrite=True
 batchFunction.skipAll =False
 batchFunction.setBatchKwargs(["imgRgb"])
 batchFunction.setOutput(files=csp.files,dset=csp.dset)
@@ -162,7 +162,7 @@ batchFunction(imgCsp=csp,overseg=oseg1,visu=False)
 
 
 print "img here"
-for i in range(3,n):
+for i in range(20,n):
     print "name ",files[i]
     k=10
     allcsp = csp[i]
