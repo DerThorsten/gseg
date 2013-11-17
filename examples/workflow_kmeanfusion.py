@@ -31,12 +31,19 @@ def showlab(imgLab):
 
 n = 5
 imagePath   		= "/home/tbeier/src/privatOpengm/experiments/datasets/bsd500/BSR/BSDS500/data/images/test/"
+imagePath           = "/home/tbeier/images/BSR/BSDS500/data/images/test/"
 files ,baseNames 	= getFiles(imagePath,"jpg")
 files 				= files[0:n]
+
+
+
+
 baseNames 			= baseNames[0:n]
 
 # rgb image
 images      		= LazyArrays(files=files,filetype="image") 
+
+assert len(images)>0
 
 
 # color space arrays
@@ -62,6 +69,7 @@ oseg1                = LazyArrays(files=makeFullPath("/home/tbeier/dump/overseg1
 # oversegmentation
 oseg2                = LazyArrays(files=makeFullPath("/home/tbeier/dump/overseg2",baseNames,"h5"),dset="data",filetype="h5")
 
+<<<<<<< HEAD
 
 
 
@@ -204,7 +212,7 @@ batchFunction(features=sift,k=2,visu=True)
 # color space convertion for all files in bsd
 batchFunction = LazyCaller(f=gseg.features.colorSpaceDescriptor,verbose=True)
 batchFunction.name = "colorpsace conversion"
-batchFunction.overwrite=False
+batchFunction.overwrite=True
 batchFunction.skipAll =False
 batchFunction.setBatchKwargs(["imgRgb"])
 batchFunction.setOutput(files=csp.files,dset=csp.dset)
@@ -268,7 +276,7 @@ batchFunction.setBatchKwargs(["imgCsp"])
 batchFunction.setOutput(files=oseg.files,dset=oseg.dset)
 batchFunction.setCompression(True,2)
 # DO THE CALL
-batchFunction(imgCsp=csp,s=3,sf=100.0,visu=False)
+batchFunction(imgCsp=csp,s=3,sf=100.0,visu=True)
 
 
 
@@ -285,7 +293,7 @@ batchFunction(imgCsp=csp,overseg=oseg,lhist=lhist,visu=False)
 
 
 
-# stage3reducer
+# stage2reducer
 batchFunction = LazyCaller(f=gseg.segmentors.stage2Reducer,verbose=True)
 batchFunction.name = "stage 2 reducer"
 batchFunction.overwrite=False
@@ -298,7 +306,12 @@ batchFunction(imgCsp=csp,overseg=oseg1,visu=False)
 
 
 print "img here"
+<<<<<<< HEAD
 for i in range(0,n):
+=======
+for i in range(20,n):
+    print "name ",files[i]
+>>>>>>> 04f3da1344f1ae6eb5c46ef02eb4421b22078883
     k=10
     allcsp = csp[i]
     hist   = lhist[i]
@@ -362,9 +375,9 @@ for i in range(0,n):
 
     cell1StateMixed = numpy.zeros(cgp.numCells(1),dtype=numpy.uint32)
 
-    guessK  = int(numpy.sqrt(cgp.numCells(1)/2))
-    #for kk in [2,4,8,16,32,64,128,512,cgp.numCells(2)/2]:
-    for kk in [guessK]:#,4,8,16,32,64,128,512,cgp.numCells(2)/2]:
+
+    for kk in [10]:
+
 
         segmentor = gseg.segmentors.HierarchicalClustering(cgp=cgp)
         # whiten the features
@@ -488,5 +501,5 @@ for i in range(0,n):
 
 
 
-    cgp2d.visualize(img_rgb=imgRGBTopo,cgp=cgp,edge_data_in=cell1StateMixed.astype(numpy.float32),cmap="hot")
+    #cgp2d.visualize(img_rgb=imgRGBTopo,cgp=cgp,edge_data_in=cell1StateMixed.astype(numpy.float32),cmap="hot")
     #cgp2d.visualize(img_rgb=imgRGBTopo,cgp=cgp2)#,edge_data_in=cell1State.astype(numpy.float32))

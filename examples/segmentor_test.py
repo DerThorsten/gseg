@@ -29,8 +29,8 @@ def toSomeColorSpaces(rgb,b):
 
 	fu = numpy.concatenate([xv,yv],axis=2)
 
-	print "foo",fu.shape
-	print "xv",xv
+	#print "foo",fu.shape
+	#print "xv",xv
 	f = numpy.concatenate([lab,luv,xyz,rgbp,cbcr,xv,yv],axis=2)
 
 	print f.shape
