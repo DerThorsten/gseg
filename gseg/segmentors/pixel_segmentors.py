@@ -6,23 +6,30 @@ import pylab
 
 
 
-def kMeansPixelColoring(features,k):
-	"""	Call k means for a single feature space.
+def kMeansPixelColoring(features,k,visu=False):
+    """	Call k means for a single feature space.
 
-		kwargs:
-			features : at least a 3d arrays .
-				The first 2 axis are the x and y axis.
-				The next dimensions are the features
+    kwargs:
+        features : at least a 3d arrays .
+        The first 2 axis are the x and y axis.
+        The next dimensions are the features
 
-			k : number of clusters 
+        k : number of clusters 
 
-		returns : sigle segmentations
-	"""
-	segmentor = MiniBatchKMeans(k)
-	f = features.reshape(features.shape[0]*features.shape[1],-1)
-	labels = segmentor.fit_predict(f)
-	labels = labels.reshape([features.shape[0],features.shape[1]])
-	return labels
+    returns : sigle segmentations
+    """
+    segmentor = MiniBatchKMeans(k)
+    f = features.reshape(features.shape[0]*features.shape[1],-1)
+    labels = segmentor.fit_predict(f)
+    labels = labels.reshape([features.shape[0],features.shape[1]])
+
+    if visu:
+        cmap = matplotlib.colors.ListedColormap ( numpy.random.rand ( 256,3))
+        pylab.imshow ( numpy.swapaxes(labels,0,1), cmap = cmap)
+        pylab.show()
+
+
+    return labels
 
 
 
