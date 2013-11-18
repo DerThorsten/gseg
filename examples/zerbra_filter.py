@@ -2,7 +2,6 @@ import vigra
 import numpy
 import gseg
 
-import mdp
 import pylab
 from sklearn.feature_extraction import image as skli
 
@@ -18,14 +17,14 @@ visu 	 	= True
 filepath 	= '42049.jpg'
 filepath    = '156065.jpg'
 filepath    = 'zebra.jpg'
-filepath    = 't.jpg'
+#filepath    = 't.jpg'
 #filepath    = 'img.png'
 rgb 		= vigra.readImage(filepath)#[0:200,0:200,:]
 lab         = vigra.colors.transform_RGB2Lab(rgb)  
 g           = lab[:,:,0]
 
 
-rr= [2,4,6,8,10,12,14,16]
+rr= [6,8,10,12,14,16]
 res = numpy.zeros(g.shape+(len(rr),))
 
 

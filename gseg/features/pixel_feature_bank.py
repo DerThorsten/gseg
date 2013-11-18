@@ -1,11 +1,9 @@
 import vigra
 import numpy
 import phist
-<<<<<<< HEAD
-import vlfeat
+
 import matplotlib.pyplot as plt
 import matplotlib.cm as cm
-=======
 import skimage.color
 import pylab
 
@@ -25,7 +23,6 @@ def show(img):
 		pylab.imshow(numpy.swapaxes(cc,0,1))
 		pylab.show()
 
->>>>>>> 04f3da1344f1ae6eb5c46ef02eb4421b22078883
 
 def colorSpaceDescriptor(imgRgb):
 	rgb = imgRgb
@@ -60,12 +57,9 @@ def gaborKernelBank(nRot=8,sigmas=[1.5]):
 
 
 
-
+"""
 def denseSift(imgIn,verbose=False,border=[10,10],visu=False,dtype=numpy.float32):
     def  extendBorder(imgIn,borderSize,visu=False):
-        """
-            extend the image with mirror boundary conditions
-        """
         img=imgIn
         oldShape = img.shape
         flipUd   = numpy.fliplr(img)
@@ -91,8 +85,6 @@ def denseSift(imgIn,verbose=False,border=[10,10],visu=False,dtype=numpy.float32)
         
         return img
     def frameToCoordinate(F):
-        """swap axis from deseSift output and apply floor
-        """
         cX = F[1,:]
         cY = F[0,:]
         cX = numpy.floor(cX)
@@ -103,8 +95,6 @@ def denseSift(imgIn,verbose=False,border=[10,10],visu=False,dtype=numpy.float32)
         return coords
 
     def checkCovering(shape,border,coord):
-        """ check if the orginal image is densely covered
-        """
         covering = numpy.zeros(shape)
         covering[coord] = 1
 
@@ -166,4 +156,4 @@ def denseSift(imgIn,verbose=False,border=[10,10],visu=False,dtype=numpy.float32)
             plt.show()
 
     return featureImgSrcShape
-
+"""

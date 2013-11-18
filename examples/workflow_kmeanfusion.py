@@ -29,7 +29,7 @@ def showlab(imgLab):
     plt.show()
 
 
-n = 5
+n = 25
 imagePath   		= "/home/tbeier/src/privatOpengm/experiments/datasets/bsd500/BSR/BSDS500/data/images/test/"
 imagePath           = "/home/tbeier/images/BSR/BSDS500/data/images/test/"
 files ,baseNames 	= getFiles(imagePath,"jpg")
@@ -69,7 +69,6 @@ oseg1                = LazyArrays(files=makeFullPath("/home/tbeier/dump/overseg1
 # oversegmentation
 oseg2                = LazyArrays(files=makeFullPath("/home/tbeier/dump/overseg2",baseNames,"h5"),dset="data",filetype="h5")
 
-<<<<<<< HEAD
 
 
 
@@ -85,20 +84,20 @@ def reduceMe(features):
     gradmagc = numpy.zeros([features.shape[0],features.shape[1],features.shape[2]])
 
     for c in range(features.shape[2]):
-        print "channel",c
+        #print "channel",c
         gradmagc[:,:,c]=vigra.filters.gaussianGradientMagnitude(features[:,:,c],sigma=1.0)
     features = numpy.array(features)
     gradmagm = numpy.mean(gradmagc,axis=2)
     
     
-
+    """
     f = pylab.figure()
     for n, img in enumerate([gradmagf,gradmagm]):
         #f.add_subplot(2, 1, n)  # this line outputs images on top of each other
         f.add_subplot(1, 2, n)  # this line outputs images side-by-side
         pylab.imshow(numpy.swapaxes(img,0,1))
     pylab.show()
-
+    """
 
 
     print features.shape
@@ -106,10 +105,10 @@ def reduceMe(features):
 
     flat        = features.reshape(features.shape[0]*features.shape[1],nf)
     #kpca = PCA(n_components=3, copy=True, whiten=True)
-    kpca =SparsePCA(n_components=3)
+    #kpca =SparsePCA(n_components=3)
     #kpca = TruncatedSVD(n_components=3)
     #kpca = ProjectedGradientNMF(n_components=3)
-    #kpca = NMF(n_components=3)
+    kpca = NMF(n_components=3)
     #pca = RandomizedPCA(n_components=3)
     print "do the job"
     X_kpca = kpca.fit_transform(flat)
@@ -168,7 +167,7 @@ trash                = LazyArrays(files=makeFullPath("/home/tbeier/dump/trash",b
 
 
 
-
+"""
 # color space convertion for all files in bsd
 batchFunction = LazyCaller(f=gseg.features.denseSift,verbose=True)
 batchFunction.name = "dense sift"
@@ -179,25 +178,25 @@ batchFunction.setOutput(files=sift.files,dset=sift.dset)
 batchFunction.setCompression(True,2)
 # DO THE CALL
 batchFunction(imgIn=images,visu=False)
+"""
 
-
-
+"""
 
 # color space convertion for all files in bsd
-batchFunction = LazyCaller(f=gseg.segmentors.kMeansPixelColoring,verbose=True)
-batchFunction.name = "sift k means"
-batchFunction.overwrite=True
+batchFunction = LazyCaller(f=reduceMe,verbose=True)
+batchFunction.name = "reduction"
+batchFunction.overwrite=False
 batchFunction.skipAll =False
 batchFunction.setBatchKwargs(["features"])
 batchFunction.setOutput(files=trash.files,dset=trash.dset)
 batchFunction.setCompression(True,2)
 # DO THE CALL
-batchFunction(features=sift,k=2,visu=True)
+batchFunction(features=lhist)
 
 
 
 
-
+"""
 
 
 
@@ -212,7 +211,7 @@ batchFunction(features=sift,k=2,visu=True)
 # color space convertion for all files in bsd
 batchFunction = LazyCaller(f=gseg.features.colorSpaceDescriptor,verbose=True)
 batchFunction.name = "colorpsace conversion"
-batchFunction.overwrite=True
+batchFunction.overwrite=False
 batchFunction.skipAll =False
 batchFunction.setBatchKwargs(["imgRgb"])
 batchFunction.setOutput(files=csp.files,dset=csp.dset)
@@ -305,13 +304,9 @@ batchFunction.setCompression(True,2)
 batchFunction(imgCsp=csp,overseg=oseg1,visu=False)
 
 
-print "img here"
-<<<<<<< HEAD
-for i in range(0,n):
-=======
+
 for i in range(20,n):
     print "name ",files[i]
->>>>>>> 04f3da1344f1ae6eb5c46ef02eb4421b22078883
     k=10
     allcsp = csp[i]
     hist   = lhist[i]
