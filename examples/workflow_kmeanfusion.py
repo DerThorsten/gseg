@@ -29,17 +29,18 @@ def showlab(imgLab):
     plt.show()
 
 
-n = 25
+n = 1
 imagePath   		= "/home/tbeier/src/privatOpengm/experiments/datasets/bsd500/BSR/BSDS500/data/images/test/"
-imagePath           = "/home/tbeier/images/BSR/BSDS500/data/images/test/"
+#imagePath           = "/home/tbeier/images/BSR/BSDS500/data/images/test/"
 files ,baseNames 	= getFiles(imagePath,"jpg")
-files 				= files[0:n]
+
+i=0
+files 				= files[i:n]
+baseNames 			= baseNames[i:n]
 
 
-
-
-baseNames 			= baseNames[0:n]
-
+files                   = ['zebra.jpg']
+baseNames               = ['zebra.jpg']
 # rgb image
 images      		= LazyArrays(files=files,filetype="image") 
 
@@ -167,36 +168,81 @@ trash                = LazyArrays(files=makeFullPath("/home/tbeier/dump/trash",b
 
 
 
-"""
+
+
+def recursiveStuff(hist,visu=True):
+    features=hist
+    dx,dy= features.shape[0],features.shape[1]
+    nPixel    = dx*dy
+
+    features = hist.reshape([dx*dy,-1])
+
+    for x in range(4):
+        # take features and reduce them to a 3 banded feature image
+        flat = features.reshape(nPixel,-1)
+        #kpca = NMF(n_components=3, copy=True, whiten=True)
+        kpca = NMF(n_components=3)
+        print "fit pca"
+        ft   = kpca.fit_transform(flat)
+        ft   = ft.reshape([dx,dy,3])
+        ft   = numpy.require(ft,dtype=numpy.float32)
+
+        if visu :
+            fimg = ft.copy()
+            fimg-=fimg.min()
+            fimg/=fimg.max()
+            fimg = vigra.taggedView(fimg,axistags=vigra.defaultAxistags("xyc"))
+            print "fimg",fimg.shape
+            gradmag = vigra.filters.gaussianGradientMagnitude(fimg,sigma=2.5)[:,:,0]
+
+            f = pylab.figure()
+            for n, img in enumerate([gradmag,fimg]):
+                #f.add_subplot(2, 1, n)  # this line outputs images on top of each other
+                f.add_subplot(2, 1, n)  # this line outputs images side-by-side
+                pylab.imshow(numpy.swapaxes(img,0,1))
+            pylab.show()
+
+        # compute new histogram
+        print "get histogram"
+        ft = vigra.taggedView(ft,axistags=vigra.defaultAxistags("xyc"))
+        print ft.shape,ft.dtype,type(ft)
+        features = numpy.zeros([dx,dy,5,5,5],dtype=numpy.float32)
+        ft=numpy.array(ft,dtype=numpy.float32)
+        features = phist.jointHistogram(image=fimg,r=1,bins=5,sigma=[0.3,0.3])
+
+    return features
+
+
+
+
+
 # color space convertion for all files in bsd
-batchFunction = LazyCaller(f=gseg.features.denseSift,verbose=True)
+batchFunction = LazyCaller(f=gseg.features.denseBatchSift,verbose=True)
 batchFunction.name = "dense sift"
-batchFunction.overwrite=False
+batchFunction.overwrite=True
 batchFunction.skipAll =False
 batchFunction.setBatchKwargs(["imgIn"])
 batchFunction.setOutput(files=sift.files,dset=sift.dset)
 batchFunction.setCompression(True,2)
 # DO THE CALL
-batchFunction(imgIn=images,visu=False)
-"""
+batchFunction(imgIn=images,visu=False,scales=[0.4])
 
-"""
+
+
 
 # color space convertion for all files in bsd
-batchFunction = LazyCaller(f=reduceMe,verbose=True)
-batchFunction.name = "reduction"
-batchFunction.overwrite=False
+batchFunction = LazyCaller(f=gseg.segmentors.kMeansPixelColoring,verbose=True)
+batchFunction.name = "fun"
+batchFunction.overwrite=True
 batchFunction.skipAll =False
 batchFunction.setBatchKwargs(["features"])
 batchFunction.setOutput(files=trash.files,dset=trash.dset)
 batchFunction.setCompression(True,2)
 # DO THE CALL
-batchFunction(features=lhist)
+batchFunction(features=sift,k=10,visu=True)
 
 
 
-
-"""
 
 
 

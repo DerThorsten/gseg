@@ -6,7 +6,7 @@ import matplotlib.pyplot as plt
 import matplotlib.cm as cm
 import skimage.color
 import pylab
-
+import vlfeat
 
 def show(img):
 	i=img.copy()
@@ -54,11 +54,19 @@ def gaborKernelBank(nRot=8,sigmas=[1.5]):
 
 
 
+def denseBatchSift(imgIn,verbose=False,border=[10,10],visu=False,dtype=numpy.float32,scales=[0.2,0.6,1.0]):
+
+    res = [] 
+    for scale in scales:
+        print scale
+        r = denseSift(imgIn=imgIn,verbose=verbose,border=border,visu=visu,scale=scale)
+        res.append(r)
+
+    r=numpy.concatenate(res,axis=2)
+    return r
 
 
-
-"""
-def denseSift(imgIn,verbose=False,border=[10,10],visu=False,dtype=numpy.float32):
+def denseSift(imgIn,verbose=False,border=[10,10],visu=False,dtype=numpy.float32,scale=None):
     def  extendBorder(imgIn,borderSize,visu=False):
         img=imgIn
         oldShape = img.shape
@@ -105,6 +113,13 @@ def denseSift(imgIn,verbose=False,border=[10,10],visu=False,dtype=numpy.float32)
         nZeros = len(whereZero[0])
         nOnes  = total-nZeros
         return nZeros==0
+
+    #imgIn = numpy.squeeze(vigra.filters.laplacianOfGaussian(imgIn,1.0))
+
+    if scale is not None :
+        shapeOrg = [dx,dy] =imgIn.shape[0:2]
+        newShape  = [  int(float(dx)*scale) ,int(float(dy)*scale)  ]
+        imgIn = vigra.sampling.resize(imgIn,newShape)
 
     if imgIn.ndim == 3 :
         imgIn = numpy.sum(imgIn,axis=2)
@@ -155,5 +170,7 @@ def denseSift(imgIn,verbose=False,border=[10,10],visu=False,dtype=numpy.float32)
             plt.imshow(featureImgSrcShape[:,:,fi].T, cmap = cm.Greys_r)
             plt.show()
 
+
+    if scale is not None :
+        featureImgSrcShape = vigra.sampling.resize(featureImgSrcShape,shapeOrg+(featureImgSrcShape.shape[2],))
     return featureImgSrcShape
-"""
